@@ -1,7 +1,7 @@
 import React from "react";
 import axios from "axios";
+import { createEndpoint } from "../consts"
 
-const endpoint = 'http://localhost:3000/';
 class Home extends React.Component {
     constructor(props) {
         super(props);
@@ -28,9 +28,7 @@ class Home extends React.Component {
                 :
                 <div className="upload" >
                     <div className="error">
-                        <span>Something went wrong</span>
-                        {this.state.error.statusText ? <span>StatusText: {this.state.error.statusText}</span> : ''}
-                        {this.state.error.status ? <span>Error Code: {this.state.error.status}</span> : ''}
+                        {this.state.error ? <span>Error: {this.state.error}</span> : ''}
                     </div>
                 </div>
             }
@@ -39,22 +37,25 @@ class Home extends React.Component {
 
     handleUpload = () => {
         const data = new FormData();
-        data.append('file', this.state.selectedFile, 'image');
+        data.append('image', this.state.selectedFile, this.state.selectedFile.name);
 
-        axios.post(endpoint, data, {
+        axios.post(createEndpoint, data, {
                 onUploadProgress: ProgressEvent => {
-                    debugger;
                     this.setState({
                         loaded: (ProgressEvent.loaded / ProgressEvent.total*100),
                     })
                 },
             })
             .then(res => {
-                console.log(res.statusText)
+                let link = this.getLink(res);
+                if (link) {
+                    window.location.assign(`/bill?billId=${link}`);
+                } else {
+                    this.setError('oops, no link returned');
+                }
             })
             .catch(err => {
-                debugger;
-                this.setState({error: err.response ? err.response : {}});
+                this.setError(err.statusText);
             })
 
     };
@@ -65,5 +66,18 @@ class Home extends React.Component {
             loaded: 0,
         })
     };
+
+    setError(err) {
+        this.setState({error: err});
+        console.error('something went bad!', err);
+    }
+
+    getLink(res) {
+        let d = res.data;
+        if (d && d.link) {
+            return d.link
+        }
+        return false;
+    }
 }
 export default Home;
